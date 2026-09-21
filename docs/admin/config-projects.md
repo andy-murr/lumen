@@ -17,7 +17,7 @@ Projects are useful when:
 
 Projects live entirely in the database and are managed through the web interface — there is no `projects:` section in `config.yaml`. (Config version 3 removed the section; a config that still contains one is rejected at startup — see [Admin Configuration](config.md#file-version).)
 
-- **Create** a project at `/projects` (admin only). A new project has no coin pool of its own and falls back to the global `defaults.tokens` pool (see [Admin Configuration](config.md)) or a group pool if the project is a group member.
+- **Create** a project at `/projects` (admin only). Creating requires an owner: search by name or email in the create dialog — the Create button stays disabled until one is picked. A new project has no coin pool of its own and falls back to the global `defaults.tokens` pool (see [Admin Configuration](config.md)) or a group pool if the project is a group member.
 - **Edit** a project from its detail page (`/projects/<id>`) via the **Edit** button above the stats: the project owner or an admin can change the name and active flag; only admins can set the coin pool (**Max Coins** and **Refill Rate**). Clearing Max Coins removes the project's own pool so it falls back to the inherited group/default pool.
 - **Assign managers and create API keys** from the detail page tabs.
 

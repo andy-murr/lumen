@@ -335,13 +335,13 @@ def create_project():
         return jsonify({"error": "A project with this name already exists"}), HTTPStatus.CONFLICT
 
     owner_email = (data.get("owner_email") or "").strip()
-    owner_user = None
-    if owner_email:
-        owner_user = db.session.execute(
-            select(Entity).filter_by(email=owner_email, entity_type="user")
-        ).scalar_one_or_none()
-        if not owner_user:
-            return jsonify({"error": "Owner user not found"}), HTTPStatus.NOT_FOUND
+    if not owner_email:
+        return jsonify({"error": "Owner email required"}), HTTPStatus.BAD_REQUEST
+    owner_user = db.session.execute(
+        select(Entity).filter_by(email=owner_email, entity_type="user")
+    ).scalar_one_or_none()
+    if not owner_user:
+        return jsonify({"error": "Owner user not found"}), HTTPStatus.NOT_FOUND
 
     project = Entity(
         entity_type="project",
@@ -352,12 +352,11 @@ def create_project():
     db.session.add(project)
     db.session.flush()
 
-    if owner_user:
-        db.session.add(EntityManager(
-            user_entity_id=owner_user.id,
-            project_entity_id=project.id,
-            is_owner=True,
-        ))
+    db.session.add(EntityManager(
+        user_entity_id=owner_user.id,
+        project_entity_id=project.id,
+        is_owner=True,
+    ))
 
     db.session.commit()
 

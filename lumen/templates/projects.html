@@ -112,15 +112,18 @@
           <label for="project-name-input" class="form-label">Project name</label>
           <input type="text" id="project-name-input" class="form-control" placeholder="e.g. research-bot">
         </div>
-        <div class="mb-3">
-          <label for="project-owner-input" class="form-label">Owner email (optional)</label>
-          <input type="email" id="project-owner-input" class="form-control" placeholder="user@example.edu">
-          <div class="form-text">The owner can add/remove managers, transfer ownership, and activate/deactivate this project.</div>
+        <div class="mb-3 position-relative">
+          <label for="project-owner-input" class="form-label">Owner</label>
+          <input type="text" id="project-owner-input" class="form-control" placeholder="Search by name or email…"
+                 role="combobox" aria-autocomplete="list" aria-expanded="false"
+                 aria-controls="project-owner-suggestions" autocomplete="off">
+          <ul id="project-owner-suggestions" role="listbox" aria-label="Matching users" class="dropdown-menu w-100 mb-0 p-0"></ul>
+          <div class="form-text">Required. The owner can add/remove managers, transfer ownership, and activate/deactivate this project.</div>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button class="btn btn-primary" id="create-project-btn">Create</button>
+        <button class="btn btn-primary" id="create-project-btn" disabled>Create</button>
       </div>
     </div>
   </div>
@@ -177,6 +180,7 @@
 {% endblock %}
 
 {% block scripts %}
+{% if is_admin %}<script src="{{ url_for('static', filename='js/user-search.js') }}"></script>{% endif %}
 <script>
 (function () {
   const IS_ADMIN = {{ is_admin | tojson }};
@@ -435,16 +439,32 @@
 })();
 
 {% if is_admin %}
-document.getElementById("create-project-btn").addEventListener("click", async function () {
-  const name = document.getElementById("project-name-input").value.trim();
-  if (!name) return;
-  const ownerEmail = document.getElementById("project-owner-input").value.trim();
-  const body = { name };
-  if (ownerEmail) body.owner_email = ownerEmail;
+// ── Create project modal (admins) ────────────────────────────────────────
+const nameInput = document.getElementById('project-name-input');
+const ownerInput = document.getElementById('project-owner-input');
+const createBtn = document.getElementById('create-project-btn');
+
+// Owner is mandatory: Create stays disabled until a name and an owner are set.
+function updateCreateState() {
+  createBtn.disabled = !(nameInput.value.trim() && ownerInput.value.trim());
+}
+nameInput.addEventListener('input', updateCreateState);
+ownerInput.addEventListener('input', updateCreateState);
+initUserSearch({
+  inputId: 'project-owner-input',
+  listId: 'project-owner-suggestions',
+  searchUrl: '/admin/api/users/search?q=',
+  onChoose: updateCreateState,
+});
+
+createBtn.addEventListener("click", async function () {
+  const name = nameInput.value.trim();
+  const ownerEmail = ownerInput.value.trim();
+  if (!name || !ownerEmail) return;
   const resp = await fetch("/projects", {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ name, owner_email: ownerEmail }),
   });
   if (resp.ok) {
     const data = await resp.json();

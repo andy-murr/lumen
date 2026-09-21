@@ -63,6 +63,7 @@ Only administrators can create new projects:
 
 1. Click **+ New Project**.
 2. Enter a name (e.g., `my-service-app`).
-3. Click **Create**.
+3. In the **Owner** field, search for the owner by name or email and pick them from the suggestions.
+4. Click **Create** (enabled once a name and an owner are set).
 
-You will be redirected to the new project's detail page where you can set up managers and API keys.
+Every project must have an owner: the owner can add/remove managers, transfer ownership, and activate/deactivate the project. You will be redirected to the new project's detail page where you can set up additional managers and API keys.

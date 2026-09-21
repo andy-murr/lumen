@@ -253,8 +253,8 @@ def test_create_project_requires_admin(auth_client):
     assert resp.status_code == HTTPStatus.FORBIDDEN
 
 
-def test_create_project_succeeds(app, admin_client):
-    resp = admin_client.post("/projects", json={"name": "created-svc"})
+def test_create_project_succeeds(app, admin_client, test_user):
+    resp = admin_client.post("/projects", json={"name": "created-svc", "owner_email": "testuser@example.com"})
     assert resp.status_code == HTTPStatus.CREATED
     data = resp.get_json()
     assert data["name"] == "created-svc"
@@ -275,6 +275,24 @@ def test_create_project_duplicate_name_returns_409(admin_client, service_project
     resp = admin_client.post("/projects", json={"name": service_project["name"]})
     assert resp.status_code == HTTPStatus.CONFLICT
     assert resp.get_json()["error"] == "A project with this name already exists"
+
+
+def test_create_project_without_owner_returns_400(admin_client):
+    """Owner is mandatory: the API rejects a project with no owner email."""
+    resp = admin_client.post("/projects", json={"name": "no-owner"})
+    assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+
+def test_create_dialog_renders_owner_lookup_and_disabled_create(admin_client):
+    """The create dialog offers a user typeahead for the owner and Create starts disabled."""
+    from bs4 import BeautifulSoup
+
+    resp = admin_client.get("/projects")
+    assert resp.status_code == HTTPStatus.OK
+    soup = BeautifulSoup(resp.data, "html.parser")
+    assert soup.find(id="project-owner-suggestions") is not None
+    assert soup.find(id="project-owner-input").get("aria-controls") == "project-owner-suggestions"
+    assert soup.find(id="create-project-btn").has_attr("disabled")
 
 
 # ---------------------------------------------------------------------------
@@ -640,20 +658,6 @@ def test_create_project_with_owner(app, admin_client, test_user):
 def test_create_project_owner_not_found_returns_404(admin_client):
     resp = admin_client.post("/projects", json={"name": "bad-owner", "owner_email": "nobody@example.com"})
     assert resp.status_code == HTTPStatus.NOT_FOUND
-
-
-def test_create_project_without_owner_is_ownerless(app, admin_client):
-    resp = admin_client.post("/projects", json={"name": "no-owner"})
-    assert resp.status_code == HTTPStatus.CREATED
-    with app.app_context():
-        from lumen.extensions import db
-        from lumen.models.entity import Entity
-        from lumen.models.entity_manager import EntityManager
-        project = db.session.execute(select(Entity).filter_by(name="no-owner", entity_type="project")).scalar_one()
-        count = db.session.scalar(
-            select(func.count()).select_from(EntityManager).filter_by(project_entity_id=project.id)
-        )
-        assert count == 0
 
 
 def test_owner_can_add_manager(owner_auth_client, owned_project, second_user):

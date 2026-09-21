@@ -4,6 +4,10 @@ All notable changes to Lumen will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Require an owner when creating a project, with a user search in the owner field.
+
 ## [2.1.0] - 2026-09-20
 
 ### Added
