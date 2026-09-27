@@ -66,10 +66,13 @@ def test_list_models_includes_aliases(
 
     resp = client.get("/v1/models", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == HTTPStatus.OK
-    ids = {m["id"] for m in resp.get_json()["data"]}
-    assert test_model["model_name"] in ids
-    assert "alias-one" in ids
-    assert "alias-two" in ids
+    by_id = {m["id"]: m for m in resp.get_json()["data"]}
+    assert test_model["model_name"] in by_id
+    assert "alias-one" in by_id
+    assert "alias-two" in by_id
+    assert by_id[test_model["model_name"]]["parent"] is None
+    assert by_id["alias-one"]["parent"] == test_model["model_name"]
+    assert by_id["alias-two"]["parent"] == test_model["model_name"]
 
 
 def test_list_models_alias_loading_does_not_scale_with_catalog(
@@ -144,6 +147,7 @@ def test_get_model_by_alias_returns_metadata_under_alias(
     # The entry describes the canonical model's capabilities, not a separate model.
     assert data["object"] == "model"
     assert data["root"] == "dummy"
+    assert data["parent"] == test_model["model_name"]
 
 
 def test_get_model_unknown_alias_404(

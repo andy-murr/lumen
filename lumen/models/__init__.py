@@ -1,4 +1,5 @@
 from .api_key import APIKey
+from .auth_request import AuthRequest
 from .conversation import Conversation
 from .entity import Entity
 from .entity_balance import EntityBalance
@@ -22,6 +23,7 @@ __all__ = [
     "Entity",
     "EntityManager",
     "APIKey",
+    "AuthRequest",
     "ModelConfig",
     "ModelEndpoint",
     "EntityLimit",

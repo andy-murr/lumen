@@ -222,3 +222,89 @@ def test_group_detail_page_accessibility(app, admin_client, test_model, admin_us
     resp = admin_client.get(url)
     assert resp.status_code == HTTPStatus.OK
     _run_all_checks(resp.data, url)
+
+
+# ---------------------------------------------------------------------------
+# OAuth key-request pages (device entry, consent, error)
+# ---------------------------------------------------------------------------
+
+def _issue_device(client):
+    from lumen.extensions import limiter
+
+    limiter.reset()
+    return client.post("/oauth/device_authorization", data={
+        "client_id": "lumen-cli", "name": "opencode", "author": "alice",
+    }).get_json()
+
+
+def test_device_code_entry_page_accessibility(auth_client):
+    url = "/device"
+    resp = auth_client.get(url)
+    assert resp.status_code == HTTPStatus.OK
+    _run_all_checks(resp.data, url)
+
+
+def test_oauth_error_page_accessibility(client):
+    url = "/device/error?reason=unknown_code"
+    resp = client.get(url)
+    assert resp.status_code == HTTPStatus.BAD_REQUEST
+    _run_all_checks(resp.data, url)
+
+
+def test_oauth_consent_page_accessibility(client, auth_client):
+    body = _issue_device(client)
+    url = f"/device?code={body['user_code']}"
+    resp = auth_client.get(url)
+    assert resp.status_code == HTTPStatus.OK
+    _run_all_checks(resp.data, url)
+    # The unverified-application warning must not rely on color alone.
+    soup = _soup(resp.data)
+    assert "Unverified application" in soup.get_text()
+
+
+def test_oauth_consent_page_with_existing_key_accessibility(client, auth_client, app, test_user):
+    from lumen.extensions import db
+    from lumen.models.api_key import APIKey
+    from lumen.services.crypto import hash_api_key
+
+    raw = "sk_" + "a" * 40
+    with app.app_context():
+        db.session.add(APIKey(entity_id=test_user["id"], name="opencode",
+                              key_hash=hash_api_key(raw), key_hint="sk_aaaa...aaaa",
+                              active=True))
+        db.session.commit()
+    body = _issue_device(client)
+    url = f"/device?code={body['user_code']}"
+    resp = auth_client.get(url)
+    assert resp.status_code == HTTPStatus.OK
+    _run_all_checks(resp.data, url)
+    soup = _soup(resp.data)
+    cb = soup.find("input", id="overwrite-key")
+    assert cb is not None, "overwrite checkbox missing"
+    assert soup.find("label", attrs={"for": "overwrite-key"}) is not None
+    approve = soup.find("button", id="approve-btn")
+    assert approve is not None and approve.get("disabled") is not None
+
+
+def test_oauth_consent_page_with_ack_model_accessibility(client, auth_client, app):
+    from lumen.extensions import db
+    from lumen.models.model_config import ModelConfig
+
+    with app.app_context():
+        db.session.add(ModelConfig(
+            model_name="a11y-ack-model", input_cost_per_million=1.0,
+            output_cost_per_million=1.0, needs_ack=True,
+            ack_message="Read me first.",
+        ))
+        db.session.commit()
+    body = _issue_device(client)
+    url = f"/device?code={body['user_code']}"
+    resp = auth_client.get(url)
+    assert resp.status_code == HTTPStatus.OK
+    _run_all_checks(resp.data, url)
+    soup = _soup(resp.data)
+    btn = [b for b in soup.select(".ack-btn") if b.get("data-name") == "a11y-ack-model"]
+    assert btn and btn[0].get("aria-label") == "Acknowledge a11y-ack-model"
+    table = soup.find("table", id="consent-models")
+    assert table is not None and table.find("caption") is not None
+    assert "required" in table.get_text(), "state must not rely on color alone"

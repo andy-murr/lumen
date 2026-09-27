@@ -504,6 +504,7 @@ def create_app():
     from lumen.blueprints.help.routes import help_bp
     from lumen.blueprints.metrics.routes import metrics_bp
     from lumen.blueprints.models_page.routes import models_page_bp
+    from lumen.blueprints.oauth.routes import oauth_bp
     from lumen.blueprints.profile.routes import profile_bp
     from lumen.blueprints.projects.routes import projects_bp
 
@@ -521,6 +522,11 @@ def create_app():
     app.register_blueprint(metrics_bp)
     app.register_blueprint(help_bp)
     app.register_blueprint(connect_bp)
+    app.register_blueprint(oauth_bp)
+    # Only the two machine-facing JSON views skip CSRF; /device, /oauth/authorize
+    # and /oauth/consent stay protected because a logged-in browser submits them.
+    csrf.exempt(app.view_functions["oauth.device_authorization"])
+    csrf.exempt(app.view_functions["oauth.token"])
 
     @app.route("/healthz")
     def healthz():
@@ -726,6 +732,9 @@ def create_app():
 
         from lumen.services.config_watcher import start_config_watcher
         start_config_watcher(app, config_yaml_path)
+
+        from lumen.blueprints.oauth.routes import start_auth_request_janitor
+        start_auth_request_janitor(app)
 
     # Deliberately outside the guard above: BACKGROUND_WORKER=false keeps extra
     # workers from duplicating *shared* work, but the snapshot is per-process

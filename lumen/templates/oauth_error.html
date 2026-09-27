@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}{{ error_title }}{% endblock %}
+{% block content %}
+<h1 class="h3 mt-3">{{ error_title }}</h1>
+<p class="mb-4">{{ error_message }}</p>
+<a href="{{ url_for('chat.chat_page') if session.get('entity_id') else '/' }}" class="btn btn-primary">Back to Lumen</a>
+{% endblock %}

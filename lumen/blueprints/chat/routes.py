@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.utils import secure_filename
 
 from lumen.decorators import login_required
-from lumen.extensions import db, limiter
+from lumen.extensions import _chat_entity_id, _chat_limit, db, limiter
 from lumen.models.conversation import Conversation
 from lumen.models.entity import Entity
 from lumen.models.entity_stat import EntityStat
@@ -79,16 +79,6 @@ def _count_conversation_started(entity_id):
         .where(EntityStat.entity_id == entity_id)
         .values(conversations=EntityStat.conversations + 1)
     )
-
-
-def _chat_entity_id():
-    entity_id = session.get("entity_id")
-    return str(entity_id) if entity_id else (request.remote_addr or "unknown")
-
-
-def _chat_limit():
-    cfg = current_app.config.get("YAML_DATA", {})
-    return cfg.get("rate_limiting", {}).get("limit", "30 per minute")
 
 
 @chat_bp.route("/chat")

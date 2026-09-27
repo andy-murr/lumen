@@ -88,6 +88,8 @@ An API key is a secret token in the format `sk_...`. It identifies you to the AP
 
 The API Keys table shows all your active keys and lets you sort by name, requests, tokens, cost, or last used. Enable **Show deleted keys** to see previously revoked keys (displayed with strikethrough).
 
+Keys requested through a CLI or web app via [OAuth](./oauth-clients.md) show that provenance in the name tooltip (e.g. *Requested via lumen-cli by alice*); keys created with **+ New API Key** have no such note.
+
 | Column | Description |
 |--------|------------|
 | **Name** | The label you chose |

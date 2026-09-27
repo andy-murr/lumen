@@ -65,17 +65,23 @@ document.addEventListener("DOMContentLoaded", function () {
     localStorage.removeItem("announcement-last-dismissed");
   }
 
-  // Convert UTC ISO timestamps to local time for display
-  document.querySelectorAll(".local-datetime[data-utc]").forEach(function (el) {
+  window.renderLocalDatetimes();
+});
+
+// Convert UTC ISO timestamps to local time for display. Exposed so pages
+// that insert timestamps after load (e.g. the OAuth consent page flipping a
+// model row to "acknowledged") render them identically to the server pass.
+window.renderLocalDatetimes = function (root) {
+  (root || document).querySelectorAll(".local-datetime[data-utc]").forEach(function (el) {
     const d = new Date(el.dataset.utc);
-    if (!isNaN(d)) {
+    if (!isNaN(d) && !el.textContent) {
       el.textContent = d.toLocaleString([], {
         year: "numeric", month: "2-digit", day: "2-digit",
         hour: "2-digit", minute: "2-digit",
       });
     }
   });
-});
+};
 
 // ── Styled dialogs replacing native alert()/confirm()/prompt() ─────────────
 // Each returns a promise that resolves when the dialog closes:

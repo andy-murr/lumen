@@ -4,6 +4,26 @@ Lumen exposes an **OpenAI-compatible API**, so most tools that speak to OpenAI c
 
 > **Tip:** The [Connect page](https://lumen.example.com/connect) generates these snippets for you — including a ready-to-download OpenCode config listing every model your account can use, and curl/Python examples for a specific model. Log in first so it can fill in your models.
 
+## CLI login (lumen.sh)
+
+`lumen.sh` (from the Lumen repository) logs you in from the terminal and keeps your OpenCode model list current:
+
+1. It uses `$LUMEN_API_KEY` only when it belongs to the target server — that is, when `$LUMEN_BASE_URL` names the same server (or is unset and the default is meant), so a key issued by one Lumen is never sent to another. Otherwise it reuses a key saved for this server in `~/.config/lumen/keys.json`.
+2. Otherwise it starts a **device login**: it prints a one-time code (like `QKRT-M2BX`) and opens Lumen's approval page. Sign in, check what is being requested, and approve — the CLI then receives a fresh API key exactly once.
+3. The key is saved to `~/.config/lumen/keys.json` (mode `600`, keyed by server host) and written into a managed `# >>> lumen >>>` block in your shell's rc file (`~/.zshrc`, `~/.bashrc`, `setenv` for csh), which exports both `LUMEN_API_KEY` and `LUMEN_BASE_URL`. A plain `lumen.sh` therefore targets the server you last logged in to.
+4. Unless you pass `--no-opencode`, the Lumen provider block in `~/.config/opencode/opencode.json` is refreshed with every active model.
+
+| Flag | Purpose |
+|------|---------|
+| `-s`, `--server URL` | Server to log in to (default: `$LUMEN_BASE_URL`, else production; plain `http` only for localhost dev servers) |
+| `-k`, `--keyname NAME` | Name for the requested key (default `opencode`) |
+| `--author LABEL` | Label shown to the approver (default `$USER`) |
+| `--no-opencode` | Only log in and store the key |
+| `--relogin` | Request a new key even if one is stored; the new key always replaces the stored one |
+| `--no-aliases` | Skip model aliases when syncing |
+
+The approval page shows the requesting application, the destination it will redirect to (for web apps), and the model-consent table, and it requires an explicit overwrite confirmation when you already hold a key with the same name. See [OAuth for client developers](./oauth-clients.md) to implement the same flows in your own tool.
+
 ## 1. Create an API key
 
 Create a key on your [Profile](https://lumen.example.com/profile) page. Copy it when it is shown — it is only displayed once.
@@ -88,6 +108,8 @@ To have OpenCode only use Lumen's models — and ignore every other installed pr
 ```
 
 OpenCode will then list only Lumen's models when you select a model.
+
+Instead of downloading the config by hand, run `./lumen.sh` from a checkout of the Lumen repository: it logs you in (see [CLI login](#cli-login-lumensh)), stores the key, and updates the `lumen` provider block in your `opencode.json` in place, listing added and removed models.
 
 ## curl
 

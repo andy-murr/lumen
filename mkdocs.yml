@@ -47,6 +47,7 @@ nav:
       - Chat: guides/chat.md
       - Profile & API Keys: guides/profile.md
       - Connect Your Tools: guides/connect.md
+      - OAuth for Client Developers: guides/oauth-clients.md
       - Usage: guides/usage.md
       - API Reference: guides/api-reference.md
   - Models:

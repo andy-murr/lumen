@@ -35,6 +35,7 @@ curl https://lumen.example.com/v1/models \
 ```
 
 Returns a list of model IDs you can use in chat completion requests.
+Aliases of renamed models are listed as additional IDs whose `parent` field names the canonical model; standalone models have `parent: null`.
 
 ---
 

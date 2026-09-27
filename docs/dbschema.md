@@ -32,6 +32,30 @@ erDiagram
         numeric cost
         datetime last_used_at
         datetime created_at
+        string client_id
+        string requested_by
+    }
+
+    auth_requests {
+        int id PK
+        string flow
+        string client_id
+        string requested_name
+        string author
+        string status
+        datetime created_at
+        datetime expires_at
+        string device_code_hash
+        string user_code
+        datetime last_polled_at
+        text redirect_uri
+        string code_challenge
+        string auth_code_hash
+        datetime auth_code_expires_at
+        int entity_id FK
+        bool overwrite
+        datetime approved_at
+        int api_key_id FK
     }
 
     model_configs {
@@ -221,6 +245,8 @@ erDiagram
     }
 
     entities ||--o{ api_keys : "owns"
+    entities |o--o{ auth_requests : "approves"
+    api_keys |o--o{ auth_requests : "minted at claim"
     entities ||--o| entity_limits : "has"
     entities ||--o| entity_balances : "has"
     entities ||--o{ model_configs : "owns"
@@ -254,6 +280,7 @@ erDiagram
 
 - [entities](#entities)
 - [api\_keys](#api_keys)
+- [auth\_requests](#auth_requests)
 - [model\_configs](#model_configs)
 - [model\_endpoints](#model_endpoints)
 - [model\_aliases](#model_aliases)
@@ -317,6 +344,40 @@ API keys that entities (users or projects) use to authenticate against the proxy
 | `cost` | Numeric(12,6) | NO | Cumulative cost in USD charged through this key |
 | `last_used_at` | DateTime | YES | UTC timestamp of the most recent request; null if never used |
 | `created_at` | DateTime | NO | UTC timestamp when the key was created |
+| `client_id` | String(128) | YES | Application label the key was requested through via the OAuth flows; null for keys created on the profile page |
+| `requested_by` | String(128) | YES | Requester-supplied author label from the OAuth request (unverified) |
+
+---
+
+## auth_requests
+
+Pending or handled API-key requests created by the OAuth device flow (`/oauth/device_authorization`) or authorization-code flow (`/oauth/authorize`). Secrets are stored only as SHA-256 hashes. Rows are purged by a background janitor a few minutes after `expires_at`.
+
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| `id` | Integer | NO | Primary key |
+| `flow` | String(16) | NO | Request flow: `device` or `code` |
+| `client_id` | String(128) | NO | Free-form application label supplied by the requester (unverified) |
+| `requested_name` | String(128) | NO | Name the requester wants for the API key |
+| `author` | String(128) | YES | Free-form requester label supplied by the request (unverified) |
+| `status` | String(16) | NO | `pending`, `approved`, `denied`, or `claimed` |
+| `created_at` | DateTime | NO | UTC creation timestamp |
+| `expires_at` | DateTime | NO | UTC functional expiry; approval may extend it by the claim window |
+| `device_code_hash` | String(64) | YES | SHA-256 hash of the device-flow polling secret. Unique. |
+| `user_code` | String(9) | YES | Human-echoed `XXXX-XXXX` confirmation code shown on the consent page (cannot fetch a key). Unique among pending rows (partial index). |
+| `last_polled_at` | DateTime | YES | UTC timestamp of the most recent token poll; drives `slow_down` |
+| `redirect_uri` | Text | YES | Code-flow destination the user approved; must match exactly at redemption |
+| `code_challenge` | String(128) | YES | Code-flow S256 challenge binding redemption to the client that holds the verifier |
+| `auth_code_hash` | String(64) | YES | SHA-256 hash of the short-lived authorization code, set at approval. Unique. |
+| `auth_code_expires_at` | DateTime | YES | UTC expiry of the authorization code (60s after approval) |
+| `entity_id` | Integer (FK → entities) | YES | Approving entity; set at approval. Cascades on delete. |
+| `overwrite` | Boolean | NO | Approver agreed to replace an existing same-name key (executed at mint). Default `false`. |
+| `approved_at` | DateTime | YES | UTC approval timestamp |
+| `api_key_id` | Integer (FK → api_keys) | YES | Key minted at claim; retained to revoke on authorization-code replay. SET NULL on key delete. |
+
+**Notes:**
+- Device flow: `device_code_hash` + `user_code` populated at creation; `auth_code_*` columns stay null. Code flow is the mirror image.
+- A claimed request whose minted key is later deleted keeps `api_key_id` null (SET NULL).
 
 ---
 
@@ -776,8 +837,8 @@ groups ──< group_members >── entities ──< api_keys
 model_configs ──< model_endpoints├──< model_stats
      │                           ├──< conversations ──< messages
      ├──> entities (owner_entity_id, SET NULL)
-     ├──< model_aliases
-     ├──< model_group_access     └──< request_logs
+      ├──< model_aliases          ├──< auth_requests (approves)
+      ├──< model_group_access     └──< request_logs
      └──< model_stats / request_logs
 ```
 

@@ -1,4 +1,5 @@
 from authlib.integrations.flask_client import OAuth
+from flask import current_app, request, session
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_migrate import Migrate
@@ -10,6 +11,16 @@ db = SQLAlchemy()
 migrate = Migrate()
 oauth = OAuth()
 limiter = Limiter(key_func=get_remote_address)
+
+
+def _chat_entity_id():
+    entity_id = session.get("entity_id")
+    return str(entity_id) if entity_id else (request.remote_addr or "unknown")
+
+
+def _chat_limit():
+    cfg = current_app.config.get("YAML_DATA", {})
+    return cfg.get("rate_limiting", {}).get("limit", "30 per minute")
 
 # Root modules of the PostgreSQL DBAPIs this app may be built against. psycopg2
 # is the pinned driver; psycopg (3) is listed so a driver swap cannot silently

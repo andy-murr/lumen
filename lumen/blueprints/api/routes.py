@@ -332,6 +332,9 @@ def list_models():
         for alias in sorted(a.alias for a in c.aliases):
             alias_entry = dict(entry)
             alias_entry["id"] = alias
+            # Advertise the canonical model so clients can tell an alias apart
+            # from a standalone model.
+            alias_entry["parent"] = c.model_name
             data.append(alias_entry)
     return jsonify({"object": "list", "data": data})
 
@@ -353,7 +356,9 @@ def get_model(model_id):
     d = _model_dict(config, rates, list(eps))
     # Requested via an alias? Return metadata under the requested ID so clients
     # that validate their configured model against discovery keep working.
-    d["id"] = model_id
+    if model_id != config.model_name:
+        d["id"] = model_id
+        d["parent"] = config.model_name
     return jsonify(d)
 
 

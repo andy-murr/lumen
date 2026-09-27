@@ -528,6 +528,7 @@ const KEY_ROWS = [
     id: {{ key.id }},
     name: {{ (key.name or "(unnamed)") | tojson }},
     hint: {{ key.key_hint | tojson }},
+    source: {% if key.client_id %}{{ ('Requested via ' + key.client_id + ((' by ' + key.requested_by) if key.requested_by else '')) | tojson }}{% else %}null{% endif %},
     requests: {{ key.requests or 0 }},
     tokens: {{ (key.input_tokens or 0) + (key.output_tokens or 0) }},
     cost: {{ "%.6f"|format(key.cost|float) }},
@@ -568,7 +569,7 @@ function renderKeys() {
           ? `<button class="btn btn-sm btn-outline-danger delete-key-btn" data-id="${k.id}" aria-label="Delete key ${escHtml(k.name)}">Delete</button>`
           : `<span class="badge bg-secondary">deleted</span>`);
       return `<tr${deletedClass}>
-        <td><span data-bs-toggle="tooltip" data-bs-title="${escHtml(k.hint)}">${escHtml(k.name)}</span></td>
+        <td><span data-bs-toggle="tooltip" data-bs-title="${escHtml(k.hint)}${k.source ? '&#10;' + escHtml(k.source) : ''}">${escHtml(k.name)}</span></td>
         <td class="text-end">${k.requests.toLocaleString()}</td>
         <td class="text-end">${k.tokens.toLocaleString()}</td>
         <td class="text-end">${parseFloat(k.cost).toFixed(2)}</td>

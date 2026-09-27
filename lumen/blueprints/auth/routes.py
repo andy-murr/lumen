@@ -124,10 +124,21 @@ def sync_auto_memberships(entity: Entity, userinfo=None, extra_groups=None):
 @auth_bp.route("/")
 def landing():
     if session.get("entity_id"):
-        return redirect(url_for("chat.chat_page"))
+        return _post_login_redirect()
     has_provider = hasattr(oauth, "provider")
     has_dev = bool(current_app.config.get("DEV_USER"))
     return render_template("landing.html", has_provider=has_provider, has_dev=has_dev)
+
+
+def _post_login_redirect():
+    """Where to send a user that just signed in.
+
+    An OAuth key-request page (/device, /oauth/authorize) stashes its fixed
+    internal destination in the session before bouncing through here; the
+    stash is only ever set by our own views via url_for/full_path, so this
+    cannot be pointed at an external URL.
+    """
+    return redirect(session.pop("oauth_return_to", None) or url_for("chat.chat_page"))
 
 
 @auth_bp.route("/login")
@@ -172,7 +183,7 @@ def devlogin():
     session["initials"] = entity.initials
     session["gravatar_hash"] = entity.gravatar_hash or ""
     session["entity_email"] = email
-    return redirect(url_for("chat.chat_page"))
+    return _post_login_redirect()
 
 
 @auth_bp.route("/callback")
@@ -219,7 +230,7 @@ def callback():
     session["initials"] = entity.initials
     session["gravatar_hash"] = entity.gravatar_hash or ""
     session["entity_email"] = email
-    return redirect(url_for("chat.chat_page"))
+    return _post_login_redirect()
 
 
 @auth_bp.route("/csrf-token")
