@@ -292,6 +292,21 @@ def api_key_required(f):
     return decorated
 
 
+@api_bp.route("/usage", methods=["GET"])
+@api_key_required
+def get_usage():
+    key = g.api_key
+    return jsonify({
+        "requests": key.requests,
+        "input_tokens": key.input_tokens,
+        "output_tokens": key.output_tokens,
+        "total_tokens": key.input_tokens + key.output_tokens,
+        "audio_seconds": key.audio_seconds,
+        "cost": float(key.cost),
+        "last_used_at": key.last_used_at.isoformat() + "Z" if key.last_used_at else None,
+    })
+
+
 @api_bp.route("/models", methods=["GET"])
 @api_key_required
 def list_models():

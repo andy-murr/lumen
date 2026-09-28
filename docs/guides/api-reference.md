@@ -20,10 +20,39 @@ See [Profile → API Keys](../guides/profile.md#api-keys) to create a key.
 |--------|------|-------------|
 | `GET` | `/v1/models` | List available models |
 | `GET` | `/v1/models/<id>` | Retrieve details for a single model |
+| `GET` | `/v1/usage` | Get cumulative usage for the bearer API key |
 | `POST` | `/v1/chat/completions` | Send a chat message and receive a reply |
 | `POST` | `/v1/completions` | Legacy text-completion endpoint (prefer `/v1/chat/completions`) |
 | `POST` | `/v1/audio/transcriptions` | Transcribe audio to text (speech-to-text) |
 | `POST` | `/v1/audio/translations` | Translate audio into English text |
+
+---
+
+## API Key Usage
+
+```bash
+curl https://lumen.example.com/v1/usage \
+  -H "Authorization: Bearer sk_your_api_key_here"
+```
+
+Returns cumulative usage for the **specific key** in the Authorization header, including requests,
+input and output tokens, their total, audio seconds, coins spent (`cost`), and the UTC time the key was last used:
+
+```json
+{
+  "requests": 12,
+  "input_tokens": 2400,
+  "output_tokens": 600,
+  "total_tokens": 3000,
+  "audio_seconds": 0,
+  "cost": 0.012345,
+  "last_used_at": "2026-09-28T14:00:00Z"
+}
+```
+
+`last_used_at` is `null` for a key that has never been used. This endpoint does not add to the
+request count. It does not include usage from other keys, browser chat, or earlier periods before
+the key was created.
 
 ---
 

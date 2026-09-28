@@ -6,6 +6,7 @@ All notable changes to Lumen will be documented in this file.
 
 ### Added
 
+- API keys can retrieve their cumulative usage through `GET /v1/usage`.
 - OAuth key-request flows: device flow for CLIs and authorization-code + PKCE for web apps mint scoped API keys after a consent page with model acknowledgements and overwrite control. ([#67](https://github.com/ncsa/lumen/issues/67))
 - `lumen.sh` logs in through the device flow, stores keys per server in `~/.config/lumen/keys.json` plus a managed shell rc block (`LUMEN_API_KEY` + `LUMEN_BASE_URL`), and syncs Lumen models into the opencode config by default (`--no-opencode`, `--relogin`). ([#67](https://github.com/ncsa/lumen/issues/67))
 - Alias entries in `/v1/models` set `parent` to the canonical model ID.
