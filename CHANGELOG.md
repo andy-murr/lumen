@@ -14,6 +14,7 @@ All notable changes to Lumen will be documented in this file.
 ### Changed
 
 - Require an owner when creating a project, with a user search in the owner field.
+- **Breaking (Helm chart):** the chart no longer deploys vLLM/SGLang model servers; `models` is copied verbatim into `config.yaml` and uses the config format (snake_case keys, `endpoints` list).
 
 ## [2.1.0] - 2026-09-20
 

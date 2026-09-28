@@ -24,22 +24,6 @@ Redis: external ({{ .Values.redis.url }})
 Redis: disabled (in-memory rate limiting — not suitable for multi-replica deployments)
 {{- end }}
 
-{{- $deployed := 0 }}
-{{- range .Values.models }}
-{{- if gt (int (.replicas | default 0)) 0 }}
-{{- $deployed = add1 $deployed }}
-{{- end }}
-{{- end }}
-{{- if gt $deployed 0 }}
-
-Model inference servers deployed: {{ $deployed }}
-{{- range .Values.models }}
-{{- if gt (int (.replicas | default 0)) 0 }}
-  - {{ .name }} ({{ .engine }}, {{ .replicas }} replica(s))
-{{- end }}
-{{- end }}
-{{- end }}
-
 {{- if and (not .Values.existingSecret) (or (not .Values.config.secretKey) (not .Values.config.encryptionKey)) }}
 
 WARNING: config.secretKey and/or config.encryptionKey are not set.

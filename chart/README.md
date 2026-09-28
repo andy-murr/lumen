@@ -153,119 +153,23 @@ The chart emits a **version 3** `config.yaml`. Groups — memberships, coin pool
 
 ### Models
 
-Models are registered in Lumen's config regardless of `replicas`. Use `replicas: 0` for external endpoints, `replicas: 1+` to deploy an inference server in-cluster.
-
-When `replicas > 0`, two fields are always required:
-
-| Field | Purpose |
-|-------|---------|
-| `image` | Container image with an explicit, pinned tag (e.g. `vllm/vllm-openai:v0.9.1`). Never use `latest` — vLLM and SGLang releases frequently change CLI flags and behaviour. |
-| `engine` | `vllm` or `sglang`. Determines the launch command and health probe path — vLLM uses `/health` for all probes; SGLang uses `/health` for liveness but `/health_generate` for readiness. The image alone is not enough to infer this. |
-
-#### External model (replicas=0)
+The `models` list is copied verbatim into the `models:` section of the generated `config.yaml`, so it uses the app's config format (snake_case keys, one or more `endpoints` per model; see `config.yaml.example`). The chart does not deploy inference servers — run vLLM, SGLang, or any OpenAI-compatible server separately and point an endpoint at it.
 
 ```yaml
 models:
   - name: gpt-4o
-    replicas: 0
-    model: gpt-4o
-    url: https://api.openai.com/v1
-    apiKey: "sk-..."
-    lumen:
-      inputCostPerMillion: 2.5
-      outputCostPerMillion: 10.0
-      contextWindow: 128000
+    input_cost_per_million: 2.5
+    output_cost_per_million: 10.0
+    context_window: 128000
+    endpoints:
+      - url: https://api.openai.com/v1
+        api_key: "sk-..."
+      - url: http://vllm.example.internal:8000/v1   # requests round-robin across healthy endpoints
+        api_key: "change-me"
+        model: openai/gpt-oss-120b                  # upstream model ID; defaults to name
 ```
 
-#### In-cluster vLLM deployment
-
-```yaml
-models:
-  - name: llama3-8b
-    replicas: 1
-    engine: vllm
-    image: "vllm/vllm-openai:v0.9.1"
-    model: meta-llama/Meta-Llama-3-8B-Instruct
-    apiKey: "change-me"
-    port: 8000
-    gpu:
-      enabled: true
-      count: 1
-      runtimeClassName: nvidia
-      tolerations:
-        - key: dedicated
-          operator: Equal
-          value: gpu
-          effect: NoSchedule
-    resources:
-      limits:
-        cpu: "8"
-        memory: 80Gi
-        nvidia.com/gpu: 1
-      requests:
-        cpu: "4"
-        memory: 16Gi
-        nvidia.com/gpu: 1
-    storage:
-      enabled: true
-      size: 100Gi
-      storageClassName: longhorn
-      mountPath: /mnt/pvc
-    shmSize: 10Gi
-    extraArgs:
-      - "--max-model-len=8192"
-      - "--gpu-memory-utilization=0.9"
-    hfToken:
-      secretName: hf-token-secret
-      secretKey: HF_TOKEN
-    healthCheck:
-      startupInitialDelay: 30
-      startupPeriod: 30
-      startupFailureThreshold: 120   # 60 min budget for large model loads
-    lumen:
-      inputCostPerMillion: 0.1
-      outputCostPerMillion: 0.3
-      contextWindow: 8192
-```
-
-#### In-cluster SGLang deployment
-
-```yaml
-models:
-  - name: qwen3-8b
-    replicas: 1
-    engine: sglang
-    image: "lmsysorg/sglang:v0.5.11-cu129-runtime"
-    model: Qwen/Qwen3-8B
-    apiKey: "change-me"
-    port: 8000
-    gpu:
-      enabled: true
-      count: 1
-      runtimeClassName: nvidia
-    resources:
-      limits:
-        cpu: "8"
-        memory: 80Gi
-        nvidia.com/gpu: 1
-      requests:
-        cpu: "4"
-        memory: 16Gi
-        nvidia.com/gpu: 1
-    storage:
-      enabled: true
-      size: 50Gi
-      storageClassName: longhorn
-    shmSize: 10Gi
-    extraArgs:
-      - "--reasoning-parser=qwen3"
-      - "--tool-call-parser=qwen3_coder"
-      - "--mem-fraction-static=0.8"
-    lumen:
-      inputCostPerMillion: 0.05
-      outputCostPerMillion: 0.10
-      contextWindow: 32768
-```
+`name`, `input_cost_per_million`, `output_cost_per_million`, and `endpoints` (each with `url` and `api_key`) are required and checked by `values.schema.json`. Removing a model from the list disables it in Lumen rather than deleting it.
 
 ## Values Reference
 
@@ -307,7 +211,7 @@ models:
 | `gateway.enabled` | `false` | Enable Gateway API HTTPRoute |
 | `gateway.hostname` | `""` | Gateway hostname |
 | `gateway.timeout` | `"600s"` | Request timeout |
-| `models` | `[]` | Model definitions (see Models section) |
+| `models` | `[]` | Model definitions copied verbatim into `config.yaml` (see Models section) |
 | `serviceMonitor.enabled` | `false` | Create a Prometheus Operator ServiceMonitor scraping `/metrics`. Does **not** carry `api.prometheus.token` as scrape auth — with a token set, scrapes get 401; see the comment in `templates/servicemonitor.yaml` |
 | `serviceMonitor.interval` | `"30s"` | ServiceMonitor scrape interval |
 | `serviceMonitor.scrapeTimeout` | `"10s"` | ServiceMonitor scrape timeout |
@@ -326,7 +230,5 @@ A migration that *fails* exits non-zero and the container dies immediately (`ent
 ## Notes
 
 - **Redis and multi-replica**: With `replicaCount > 1`, configure Redis so rate-limit state is shared across pods.
-- **GPU models**: Ensure your cluster has GPU nodes with the `nvidia` RuntimeClass and the NVIDIA device plugin installed.
-- **Model PVCs**: Chart-managed PVCs use `ReadWriteMany` access mode. Ensure your storage class supports it (e.g., Longhorn, NFS).
 - **External secrets for Redis**: If using `redis.existingSecret`, also set `redis.url` so it appears in the config. Without the URL, rate limiting falls back to in-memory.
 - **Chat upload limits**: The chart has no values for `chat.upload` (`max_size_mb`, `max_text_chars`, `allowed_extensions`); the generated config.yaml omits the section and the application defaults apply (10 MB, 100,000 characters). Set them through `config.extraConfig` if you need different limits.

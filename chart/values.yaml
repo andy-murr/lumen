@@ -333,126 +333,34 @@ podAnnotations: {}
 podSecurityContext: {}
 securityContext: {}
 
-## Model inference servers ----------------------------------------------------------
-## Each entry is always registered in Lumen's config.
-## Set replicas > 0 to deploy the inference server in-cluster.
-## Set replicas = 0 to point Lumen at an external endpoint (url required).
+## Models ---------------------------------------------------------------------------
+## Copied verbatim into the `models:` section of config.yaml, so use the app's
+## config format (snake_case keys, see config.yaml.example). The chart does not
+## deploy inference servers; run them separately and point `endpoints` at them.
+## A model removed from this list is disabled in Lumen, not deleted.
 
 models: []
-# Gemma 4 31B IT (external, ICAI-hosted):
-# - name: gemma-4-31b-it
-#   replicas: 0
-#   model: google/gemma-4-31B-it
-#   url: http://google-gemma-4-31b-it-assistant.icai.ncsa.illinois.edu/v1
-#   apiKey: "ja5Shahth2quo3ir0oo0ovaethei7loa"
-#   lumen:
-#     description: "This is for testing purposes"
-#     url: "https://huggingface.co/google/gemma-4-31B-it"
-#     needsAck: false           # true = require one-time user acknowledgement (model-level, sticky)
-#     earlyAccess: false        # true = early-access model; users must acknowledge it may change or be removed
-#     endDate: ""               # optional ISO date/datetime (UTC); model hidden and rejected after this (exclusive)
-#     disabled: false           # true = hard off: hidden everywhere, not overridable by any scope
-#     ackMessage: ""            # optional; overrides config.defaults.models.ackMessage when needsAck
-#     inputCostPerMillion: 0.05
-#     outputCostPerMillion: 0.10
-#     audioCostPerHour: 0.10    # optional; only for speech-to-text (ASR) models
-#     contextWindow: 262144
-#     maxOutputTokens: 262144
-#     supportsReasoning: true
-#     inputModalities: ["text", "image", "video"]
-#     outputModalities: ["text"]
-#     aliases: ["glm-5.2"]        # optional; old IDs that resolve to this model
-#     knowledgeCutoff: "2025-01"
-#
-# Example — external model (replicas=0):
-# - name: gpt-4o
-#   replicas: 0
-#   model: gpt-4o
-#   url: https://api.openai.com/v1
-#   apiKey: "sk-..."
-#   lumen:
-#     inputCostPerMillion: 2.5
-#     outputCostPerMillion: 10.0
-#     contextWindow: 128000
-#
-# Example — in-cluster vLLM deployment (replicas>0):
-# - name: llama3-8b
-#   replicas: 1
-#   engine: vllm
-#   image: "vllm/vllm-openai:v0.9.1"        # REQUIRED — pin an explicit tag
-#   model: meta-llama/Meta-Llama-3-8B-Instruct
-#   apiKey: "change-me"
-#   port: 8000
-#   gpu:
-#     enabled: true
-#     count: 1
-#     runtimeClassName: nvidia
-#     tolerations:
-#       - key: dedicated
-#         operator: Equal
-#         value: gpu
-#         effect: NoSchedule
-#   resources:
-#     limits:
-#       cpu: "8"
-#       memory: 80Gi
-#     requests:
-#       cpu: "4"
-#       memory: 16Gi
-#   storage:
-#     enabled: true
-#     existingClaim: ""
-#     size: 100Gi
-#     storageClassName: longhorn
-#     mountPath: /mnt/pvc
-#     accessMode: ReadWriteOnce  # default; use ReadWriteMany for multi-replica shared storage (requires RWX storage class)
-#     prefetch: true             # run a pre-install/pre-upgrade Job to download weights before pods start
-#   shmSize: 10Gi  # /dev/shm size; increase for models with large KV-cache or tensor-parallel ops
-#   extraArgs:
-#     - "--max-model-len=8192"
-#   extraEnv: {}
-#   hfToken:
-#     secretName: ""
-#     secretKey: HF_TOKEN
-#   healthCheck:
-#     startupInitialDelay: 30
-#     startupPeriod: 30
-#     startupFailureThreshold: 60
-#     livenessInitialDelay: 120
-#     livenessPeriod: 15
-#     readinessInitialDelay: 120
-#     readinessPeriod: 15
-#   lumen:
-#     inputCostPerMillion: 0.1
-#     outputCostPerMillion: 0.3
-#     contextWindow: 8192
-#
-# Example — in-cluster SGLang deployment:
-# - name: qwen3-8b
-#   replicas: 1
-#   engine: sglang
-#   image: "lmsysorg/sglang:v0.5.11-cu129-runtime"  # REQUIRED — pin an explicit tag
-#   model: Qwen/Qwen3-8B
-#   apiKey: "change-me"
-#   port: 8000  # default; override if needed
-#   gpu:
-#     enabled: true
-#     count: 1
-#     runtimeClassName: nvidia
-#   resources:
-#     limits:
-#       cpu: "8"
-#       memory: 80Gi
-#   storage:
-#     enabled: true
-#     size: 50Gi
-#     storageClassName: longhorn
-#     mountPath: /mnt/pvc
-#   shmSize: 10Gi  # /dev/shm size; increase for models with large KV-cache or tensor-parallel ops
-#   extraArgs:
-#     - "--reasoning-parser=qwen3"
-#     - "--tool-call-parser=qwen3_coder"
-#   lumen:
-#     inputCostPerMillion: 0.05
-#     outputCostPerMillion: 0.10
-#     contextWindow: 32768
+# - name: gpt-4o                      # Lumen model ID used in API requests
+#   input_cost_per_million: 2.5       # REQUIRED; coins per 1M input tokens
+#   output_cost_per_million: 10.0     # REQUIRED; coins per 1M output tokens
+#   description: "OpenAI GPT-4o"
+#   url: "https://platform.openai.com/docs/models/gpt-4o"
+#   context_window: 128000
+#   max_output_tokens: 16384
+#   knowledge_cutoff: "2023-10"
+#   supports_reasoning: false
+#   input_modalities: ["text", "image"]
+#   output_modalities: ["text"]
+#   needs_ack: false                  # require a one-time user acknowledgement
+#   early_access: false               # early-access model; users must acknowledge it may change
+#   ack_message: ""                   # overrides config.defaults.models.ackMessage
+#   end_date: ""                      # ISO date/datetime (UTC); hidden and rejected after this
+#   disabled: false                   # hard off: hidden everywhere
+#   aliases: ["gpt4o"]                # old IDs that resolve to this model
+#   endpoints:                        # REQUIRED; requests round-robin across healthy endpoints
+#     - url: https://api.openai.com/v1
+#       api_key: "sk-..."
+#       model: gpt-4o                 # optional; upstream model ID, defaults to name
+#     - url: http://vllm.example.internal:8000/v1
+#       api_key: "change-me"
+#       model: openai/gpt-oss-120b
