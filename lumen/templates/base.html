@@ -17,11 +17,9 @@
 <body>
 
 {% include 'theme/page_open.html' %}
-  {# OAuth key-request pages run inside the normal app layout but suppress the
-     menu bar: an approval prompt should not look like a page you navigate to. #}
-  {% if not hide_nav %}
-    {% include 'theme/header.html' %}
-  {% endif %}
+  {# OAuth key-request pages set hide_nav: the header stays but its menu links
+     are left out, so an approval prompt does not look like a page you navigate to. #}
+  {% include 'theme/header.html' %}
 
   {% if app_announcement %}
   <div class="announcement-banner"

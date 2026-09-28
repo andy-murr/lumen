@@ -206,6 +206,12 @@ def test_device_page_shows_code_entry_form_when_no_code(auth_client):
     assert b"Enter confirmation code" in resp.data
 
 
+def test_device_page_keeps_header_but_hides_menu(auth_client):
+    resp = auth_client.get("/device")
+    assert b"Log Out" in resp.data
+    assert b"/groups" not in resp.data
+
+
 def test_device_page_bad_code_never_locks_others_or_self(auth_client):
     # No lookup budget any more: mistypes are simply unknown codes, and the
     # same user can still see a valid consent page right afterwards.
